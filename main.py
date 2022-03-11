@@ -7,16 +7,15 @@ import argparse
 import flax
 import jax
 import jax.numpy as jnp
-import numpy as np
 import yaml
 import ml_collections
 import time
 import wandb
+from tqdm import tqdm
 from flax.training import checkpoints
 
 # internal imports
 from jkonet.data import potential_dataloader
-from jkonet.data import cell_dataloader
 from jkonet.data import trajectory_dataloader
 from jkonet.models.model_jko import get_step_fn, get_optimize_psi_fn
 from jkonet.networks.energies import SimpleEnergy
@@ -24,10 +23,10 @@ from jkonet.networks.icnns import ICNN
 from jkonet.utils.optim import create_train_state, get_optimizer
 from jkonet.utils import plotting
 from jkonet.utils.helper import flat_dict, nest_dict, merge
-from jkonet.models.loss import sinkhorn_loss, wasserstein_loss
+from jkonet.models.loss import sinkhorn_loss
 
 
-def run_jko(config):
+def run_jko(config, task_dir, logging):
     # set random key
     rng = jax.random.PRNGKey(int(time.time()))
     rng, rng_e, rng_p = jax.random.split(rng, 3)
@@ -44,14 +43,8 @@ def run_jko(config):
             config.dataset.name, config.train.batch_size,
             config.dataset.setting)
         dim_data = 2
-    elif config.dataset.type == 'cell':
-        dataloader = cell_dataloader.CellDynamicsDataset(
-            config.dataset.name, config.train.batch_size,
-            config.dataset.dim_red)
-        dim_data = config.dataset.dim_red[1]
-
-        # dump eval indexes
-        np.save(os.path.join(wandb.run.dir, 'test_idxs'), dataloader.val_idxs)
+    else:
+        raise NotImplementedError('Dataloader not implemented.')
 
     # initialize models and optimizers
     if config.energy.model.name == 'simple':
@@ -105,7 +98,8 @@ def run_jko(config):
            "Missing logs or checkpoints!"
 
     # execute training
-    for step in range(0, config.train.n_iters + 1, config.train.n_jit_steps):
+    for step in tqdm(range(0, config.train.n_iters + 1,
+                           config.train.n_jit_steps - 1)):
 
         if config.settings.parallel:
             # get train batch
@@ -134,14 +128,15 @@ def run_jko(config):
             (_, state_energy), (loss_energy, loss_psi, grad_norm
                                 ) = train_step_fn((rng_i, state_energy), batch)
 
-        # log to wandb
-        if step % config.train.logs_freq == 0:
-            wandb.log({'train_loss_energy': float(loss_energy),
-                       'grad_norm_energy': float(jnp.sum(grad_norm)),
-                       'step': step})
+        if logging:
+            # log to wandb
+            if step % config.train.logs_freq == 0:
+                wandb.log({'train_loss_energy': float(loss_energy),
+                           'grad_norm_energy': float(jnp.sum(grad_norm)),
+                           'step': step})
 
-            for i in loss_psi[0]:
-                wandb.log({'train_loss_psi': float(i)})
+                for i in loss_psi[0]:
+                    wandb.log({'train_loss_psi': float(i)})
 
         # report the loss on an evaluation dataset periodically
         if (step != 0 and step % config.train.eval_freq == 0):
@@ -173,31 +168,28 @@ def run_jko(config):
                 eval_loss_energy, predicted = evaln_step_fn(
                     (rng_i, state_energy), eval_batch)
 
-            # log to wandb
-            wandb.log({'evaln_loss_energy': float(eval_loss_energy)})
+            if logging:
+                # log to wandb
+                wandb.log({'evaln_loss_energy': float(eval_loss_energy)})
 
             # save checkpoint
             if (loss_hist >= jnp.sum(eval_loss_energy)
                and jnp.sum(eval_loss_energy) >= 0):
                 loss_hist = jnp.sum(eval_loss_energy)
-                wandb.log({'best_evaln_loss_energy': float(eval_loss_energy)})
+                if logging:
+                    # log to wandb
+                    wandb.log({'best_evaln_loss_energy': float(eval_loss_energy)})
 
                 loss_hist_eval = 0
-                if 'eval' in config and config.eval.loss == 'ott':
-                    for t in range(len(eval_batch) - 1):
-                        loss_hist_eval += sinkhorn_loss(
-                          predicted[t], eval_batch[t + 1],
-                          config.settings.epsilon, div=True)
-                    wandb.log(
-                      {'best_evaln_loss_energy_s': float(loss_hist_eval)})
 
-                elif 'eval' in config and config.eval.loss == 'pot':
-                    for t in range(len(eval_batch) - 1):
-                        loss_hist_eval += wasserstein_loss(
-                          predicted[t], eval_batch[t + 1],
-                          config.settings.epsilon)
+                for t in range(len(eval_batch) - 1):
+                    loss_hist_eval += sinkhorn_loss(
+                      predicted[t], eval_batch[t + 1],
+                      config.settings.epsilon, div=True)
+                if logging:
+                    # log to wandb
                     wandb.log(
-                      {'best_evaln_loss_energy_w': float(loss_hist_eval)})
+                        {'best_evaln_loss_energy': float(loss_hist_eval)})
 
                 if config.settings.parallel:
                     save_state = flax.jax_utils.unreplicate(state_energy)
@@ -205,7 +197,7 @@ def run_jko(config):
                     save_state = state_energy
 
                 checkpoints.save_checkpoint(
-                    wandb.run.dir, save_state, step, keep=100)
+                    task_dir, save_state, step, keep=100)
 
         # generate and save samples
         if (step != 0 and step % config.train.plot_freq == 0
@@ -229,17 +221,27 @@ def main(args):
     config_task = yaml.load(open(
         os.path.join(args.config_folder, f'task/config_{args.task}.yaml')),
         yaml.UnsafeLoader)
-    config = flat_dict(merge(config, config_task))
+    config = merge(config, config_task)
 
     # init wandb
-    wandb.init(project='rebuttal_jkonet', dir=args.out_dir,
-               group=args.exp_group, entity='teamjko', config=config)
-    wandb.run.name = wandb.run.id
-    config = ml_collections.ConfigDict(nest_dict(wandb.config))
+    if args.wandb:
+        wandb.init(project='exps_jkonet', dir=args.out_dir,
+                   group=args.exp_group, config=flat_dict(config))
+        wandb.run.name = wandb.run.id
+        config = nest_dict(wandb.config)
+    config = ml_collections.ConfigDict(config)
+
+    if wandb:
+        task_dir = wandb.run.dir
+    else:
+        # create outdir if it does not exist
+        task_dir = os.path.join(args.out_dir, args.task)
+        if not os.path.exists(task_dir):
+            os.makedirs(task_dir)
 
     # run method
     print('Started run.', flush=True)
-    run_jko(config)
+    run_jko(config, task_dir=task_dir, logging=args.wandb)
     print('Finished run.', flush=True)
 
 
@@ -252,6 +254,8 @@ if __name__ == '__main__':
                         help='Folder containing the config files.')
     parser.add_argument('--task', type=str, default='styblinski',
                         help='Name of task.')
+    parser.add_argument('--wandb', action='store_true',
+                        help='Option to run with activated wandb.')
     parser.add_argument('--exp_group', type=str, default='',
                         help='Name of run.')
     parser.add_argument('--debug', action='store_true',

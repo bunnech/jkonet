@@ -13,10 +13,6 @@ train:
   plot_freq: 10000
   loss: wasserstein
 
-# evaluation
-eval:
-  loss: pot
-
 # models
 energy:
   # optimization
