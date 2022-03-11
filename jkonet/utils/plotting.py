@@ -6,7 +6,6 @@ import jax
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as clr
-import wandb
 
 
 def plot_psi_field(state_psi, data, name='', save_loc=None):
@@ -23,11 +22,12 @@ def plot_psi_field(state_psi, data, name='', save_loc=None):
     grid = np.vstack((x.ravel(), y.ravel())).T
     if data.shape[2] > 2:
         grid = np.concatenate((grid, np.zeros((grid.shape[0],
-                                               data.shape[2]-2))), axis=1)
+                                               data.shape[2] - 2))), axis=1)
     # get energy predictions
     grad_psi_data = jax.vmap(lambda x: jax.grad(state_psi.apply_fn, argnums=1)(
         state_psi.params, x))(grid)
 
+    figs = []
     for i in range(grad_psi_data.shape[0]):
         # plot energy predictions
         fig = plt.figure()
@@ -38,15 +38,8 @@ def plot_psi_field(state_psi, data, name='', save_loc=None):
         ax.quiver(grid[:, 0], grid[:, 1], grad_psi_data[i][:, 0],
                   grad_psi_data[i][:, 1], color='k')
         fig.tight_layout()
-
-        if save_loc is None:
-            # plot in summary writer
-            wandb.log({name + "psi_field":
-                       [wandb.Image(fig, caption="Psi Field")]})
-            plt.close('all')
-        else:
-            # save plot
-            fig.savefig(save_loc + '_{}.pdf'.format(i))
+        figs.append(fig)
+    return figs
 
 
 def plot_energy_potential(state_energy, data, name='', save_loc=None):
@@ -63,7 +56,7 @@ def plot_energy_potential(state_energy, data, name='', save_loc=None):
     grid = np.vstack((x.ravel(), y.ravel())).T
     if data.shape[2] > 2:
         grid = np.concatenate((grid, np.zeros((grid.shape[0],
-                                               data.shape[2]-2))), axis=1)
+                                               data.shape[2] - 2))), axis=1)
 
     # get energy predictions
     pred = state_energy.apply_fn({'params': state_energy.params}, grid, False)
@@ -80,16 +73,9 @@ def plot_energy_potential(state_energy, data, name='', save_loc=None):
     ctr = ax.contourf(x, y, z, levels=15, cmap='Blues')
 
     fig.colorbar(ctr, ax=ax)
-    fig.tight_layout()
 
-    if save_loc is None:
-        # plot in summary writer
-        wandb.log({name + 'energy':
-                   [wandb.Image(fig, caption="Energy Potential")]})
-        plt.close('all')
-    else:
-        # save plot
-        fig.savefig(save_loc + '.pdf')
+    fig.tight_layout()
+    return fig
 
 
 def plot_predictions(predicted, data, name='', save_loc=None):
@@ -123,18 +109,10 @@ def plot_predictions(predicted, data, name='', save_loc=None):
               columnspacing=1, frameon=False)
 
     fig.tight_layout()
-
-    if save_loc is None:
-        # plot in summary writer
-        wandb.log({name + "predictions":
-                   [wandb.Image(fig, caption="Predictions")]})
-        plt.close('all')
-    else:
-        # save plot
-        fig.savefig(save_loc + '.pdf')
+    return fig
 
 
-def plot_potential_field(state, data, name='', save_loc=None):
+def plot_potential_field(state, data):
     # set max and min values
     x_min = np.amin(data, axis=0)[:, 0].min() - 2.0
     x_max = np.amax(data, axis=0)[:, 0].max() + 2.0
@@ -148,7 +126,7 @@ def plot_potential_field(state, data, name='', save_loc=None):
     grid = np.vstack((x.ravel(), y.ravel())).T
     if data.shape[2] > 2:
         grid = np.concatenate((grid, np.zeros((grid.shape[0],
-                                               data.shape[2]-2))), axis=1)
+                                               data.shape[2] - 2))), axis=1)
     # get predictions
     grad_pot_data = jax.vmap(lambda x: jax.grad(state.apply_fn, argnums=1)(
         state.params, x))(grid)
@@ -164,12 +142,4 @@ def plot_potential_field(state, data, name='', save_loc=None):
               color='k')
 
     fig.tight_layout()
-
-    if save_loc is None:
-        # plot in summary writer
-        wandb.log({name + "potential_field":
-                  [wandb.Image(fig, caption="Potential Field")]})
-        plt.close('all')
-    else:
-        # save plot
-        fig.savefig(save_loc + '.pdf')
+    return fig

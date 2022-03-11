@@ -41,7 +41,7 @@ The experiments are executed via the `main.py` file. Please specify:
 - `--config_folder`: the folder containing the config files
 - `--task`: the task for which you would like to learn $\text{JKOnet}$
 
-Besides, you can execute the script in the debug mode in which the module is not jit-compiled via the `--debug` flag. To log your results via [`wandb`](), execute the script with the `--wandb` flag. You can specify the experiment group via `--exp_group`.
+Besides, you can execute the script in the debug mode in which the module is not jit-compiled via the `--debug` flag. To log your results via [`wandb`](https://wandb.ai/), execute the script with the `--wandb` flag. You can specify the experiment group via `--exp_group`.
 
 We provide code for the following tasks:
 - potential-based dynamics: `quadratic` and `styblinski`
@@ -49,7 +49,7 @@ We provide code for the following tasks:
 
 In the following, we provide an example on how to run $\text{JKOnet}$ on the semicircle task:
 ```
-python main.py --out_dir tmp --config_folder configs --task semicircle
+python main.py --out_dir results --config_folder configs --task semicircle
 ```
 
 ## Citation
@@ -60,7 +60,7 @@ In case you found our work useful, please consider citing us:
 @inproceedings{bunne2022proximal,
     title={{Proximal Optimal Transport Modeling of Population Dynamics}},
     author={Bunne, Charlotte and Meng-Papaxanthos, Laetitia and Krause, Andreas and Cuturi, Marco},
-    booktitle=International Conference on Artificial Intelligence and Statistics (AISTATS),
+    booktitle={International Conference on Artificial Intelligence and Statistics (AISTATS)},
     year={2022},
     volume={25}
 }

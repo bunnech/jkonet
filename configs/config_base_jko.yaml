@@ -7,10 +7,10 @@ method: jko
 train:
   batch_size: 250
   n_iters: 10000
-  n_jit_steps: 5
+  n_jit_steps: 10
   logs_freq: 1000
-  eval_freq: 10000
-  plot_freq: 10000
+  eval_freq: 1000
+  plot_freq: 1000
   loss: wasserstein
 
 # models

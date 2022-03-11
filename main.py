@@ -13,6 +13,7 @@ import time
 import wandb
 from tqdm import tqdm
 from flax.training import checkpoints
+import matplotlib.pyplot as plt
 
 # internal imports
 from jkonet.data import potential_dataloader
@@ -99,7 +100,7 @@ def run_jko(config, task_dir, logging):
 
     # execute training
     for step in tqdm(range(0, config.train.n_iters + 1,
-                           config.train.n_jit_steps - 1)):
+                           config.train.n_jit_steps)):
 
         if config.settings.parallel:
             # get train batch
@@ -197,20 +198,36 @@ def run_jko(config, task_dir, logging):
                     save_state = state_energy
 
                 checkpoints.save_checkpoint(
-                    task_dir, save_state, step, keep=100)
+                    task_dir, save_state, step)
 
         # generate and save samples
         if (step != 0 and step % config.train.plot_freq == 0
            or step == config.train.n_iters):
 
             # plot predictions and log to wandb
-            plotting.plot_predictions(predicted, eval_batch)
+            fig = plotting.plot_predictions(predicted, eval_batch)
+            # log to wandb
+            if logging:
+                wandb.log({"predictions": [
+                    wandb.Image(fig, caption="Predictions")]})
+            else:
+                plt.savefig(os.path.join(task_dir, 'predictions.png'))
+
             if isinstance(model_energy, SimpleEnergy):
                 if config.settings.parallel:
-                    plotting.plot_energy_potential(
-                      flax.jax_utils.unreplicate(state_energy), eval_batch[0])
+                    fig = plotting.plot_energy_potential(
+                        flax.jax_utils.unreplicate(state_energy),
+                        eval_batch[0])
                 else:
-                    plotting.plot_energy_potential(state_energy, eval_batch)
+                    fig = plotting.plot_energy_potential(
+                        state_energy, eval_batch)
+                # log to wandb
+                if logging:
+                    wandb.log({'energy_potential': [
+                        wandb.Image(fig, caption="Energy Potential")]})
+                else:
+                    plt.savefig(os.path.join(task_dir, 'energy_potential.png'))
+                plt.close('all')
 
 
 def main(args):
@@ -231,7 +248,7 @@ def main(args):
         config = nest_dict(wandb.config)
     config = ml_collections.ConfigDict(config)
 
-    if wandb:
+    if args.wandb:
         task_dir = wandb.run.dir
     else:
         # create outdir if it does not exist
