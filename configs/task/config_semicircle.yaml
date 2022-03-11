@@ -1,0 +1,14 @@
+#!/usr/bin/python3
+
+# data
+dataset:
+  type: 'trajectory'
+  name: 'semicircle'
+  time_steps: 5
+  missing_values: null
+  noise: null
+
+# settings
+settings:
+  teacher_forcing: True
+  cvx_reg: 0.0

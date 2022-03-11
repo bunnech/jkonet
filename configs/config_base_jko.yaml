@@ -1,0 +1,67 @@
+#!/usr/bin/python3
+
+# method
+method: jko
+
+# training
+train:
+  batch_size: 250
+  n_iters: 10000
+  n_jit_steps: 5
+  logs_freq: 1000
+  eval_freq: 10000
+  plot_freq: 10000
+  loss: wasserstein
+
+# evaluation
+eval:
+  loss: pot
+
+# models
+energy:
+  # optimization
+  optim:
+    weight_decay: 0.0
+    optimizer: Adam
+    lr: 0.001
+    beta1: 0.5
+    beta2: 0.9
+    eps: 0.00000001
+    grad_clip: 10.0
+
+  # model architecture
+  model:
+    name: simple
+    layers: [64, 64]
+
+psi:
+  # optimization
+  optim:
+    weight_decay: 0.0
+    optimizer: Adam
+    lr: 0.01
+    beta1: 0.5
+    beta2: 0.9
+    eps: 0.00000001
+    grad_clip: null
+
+    n_iter: 100
+    min_iter: 50
+    max_iter: 150
+    inner_iter: 10
+    thr: 1.0
+    beta: 1.0
+
+  # model architecture
+  model:
+    layers: [64, 64]
+    pos_weights: True
+    init_fn: normal
+
+# settings
+settings:
+  tau: 1.0
+  fploop: False
+  epsilon: 1.0
+  cumulative: False
+  parallel: False

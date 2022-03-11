@@ -1,0 +1,12 @@
+#!/usr/bin/python3
+
+# data
+dataset:
+  type: 'trajectory'
+  name: 'line'
+  time_steps: 2
+
+# settings
+settings:
+  teacher_forcing: False
+  cvx_reg: 0.0

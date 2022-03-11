@@ -1,0 +1,12 @@
+#!/usr/bin/python3
+
+# data
+dataset:
+  type: 'cell'
+  name: 'pelkmans'
+  dim_red: ['full', 31]
+
+# settings
+settings:
+  teacher_forcing: False
+  cvx_reg: 0.8

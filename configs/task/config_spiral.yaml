@@ -1,0 +1,14 @@
+#!/usr/bin/python3
+
+# data
+dataset:
+  type: 'trajectory'
+  name: 'spiral'
+  time_steps: 8
+  missing_values: null
+  noise: null
+
+# settings
+settings:
+  teacher_forcing: False
+  cvx_reg: 0.8

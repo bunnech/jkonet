@@ -1,0 +1,12 @@
+#!/usr/bin/python3
+
+# data
+dataset:
+  type: 'cell'
+  name: 'moon'
+  dim_red: ['pca', 10]
+
+# settings
+settings:
+  teacher_forcing: False
+  cvx_reg: 0.8
