@@ -211,7 +211,9 @@ def run_jko(config, task_dir, logging):
                 wandb.log({"predictions": [
                     wandb.Image(fig, caption="Predictions")]})
             else:
-                plt.savefig(os.path.join(task_dir, 'predictions.png'))
+                if (loss_hist >= jnp.sum(eval_loss_energy)
+                   and jnp.sum(eval_loss_energy) >= 0):
+                    plt.savefig(os.path.join(task_dir, 'predictions.png'))
 
             if isinstance(model_energy, SimpleEnergy):
                 if config.settings.parallel:
@@ -226,7 +228,10 @@ def run_jko(config, task_dir, logging):
                     wandb.log({'energy_potential': [
                         wandb.Image(fig, caption="Energy Potential")]})
                 else:
-                    plt.savefig(os.path.join(task_dir, 'energy_potential.png'))
+                    if (loss_hist >= jnp.sum(eval_loss_energy)
+                       and jnp.sum(eval_loss_energy) >= 0):
+                        plt.savefig(os.path.join(
+                            task_dir, 'energy_potential.png'))
                 plt.close('all')
 
 
