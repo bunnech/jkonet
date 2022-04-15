@@ -39,7 +39,7 @@ as the kernel.
 The experiments are executed via the `main.py` file. Please specify:
 - `--outdir`: the directory in which the results are stored
 - `--config_folder`: the folder containing the config files
-- `--task`: the task for which you would like to learn $\text{JKOnet}$
+- `--task`: the task for which you would like to learn JKOnet
 
 Besides, you can execute the script in the debug mode in which the module is not jit-compiled via the `--debug` flag. To log your results via [`wandb`](https://wandb.ai/), execute the script with the `--wandb` flag. You can specify the experiment group via `--exp_group`.
 
@@ -47,7 +47,7 @@ We provide code for the following tasks:
 - potential-based dynamics: `quadratic` and `styblinski`
 - trajectory-based dynamics: `line`, `semicircle`, and `spiral`
 
-In the following, we provide an example on how to run $\text{JKOnet}$ on the semicircle task:
+In the following, we provide an example on how to run JKOnet on the semicircle task:
 ```
 python main.py --out_dir results --config_folder configs --task semicircle
 ```
