@@ -4,9 +4,10 @@ numpy==1.22.3
 flax==0.5.3
 optax==0.1.1
 matplotlib==3.5.1
-jax==0.3.1
+jax==0.3.15
 jaxlib==0.3.0
 ott-jax==0.2.2
 wandb==0.12.21
 ml-collections==0.1.1
 tqdm==4.64.0
+tensorflow==2.8.0
