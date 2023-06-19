@@ -165,10 +165,12 @@ def get_step_fn(optimize_psi_fn, psi, optimizer_psi, teacher_forcing=True,
                 (loss_energy, (loss_psi, predicted)), _ = grad_fn_energy(
                     state_energy.params, rng_psi, batch, t)
 
-                # if no teacher-forcing, replace next overvation with predicted
+                # if no teacher-forcing, replace next observation with predicted
                 batch = jax.lax.cond(
                     teacher_forcing, lambda x: x,
-                    lambda x: jax.ops.index_update(x, t + 1, predicted), batch)
+                    lambda x: x.at[t + 1].set(predicted),
+                    batch,
+                )
 
                 return ((state_energy, batch),
                         (loss_energy, loss_psi, predicted))
